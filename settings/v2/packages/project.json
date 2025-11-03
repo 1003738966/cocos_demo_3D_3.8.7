@@ -1,0 +1,27 @@
+{
+  "__version__": "1.0.6",
+  "custom_joint_texture_layouts": [],
+  "physics": {
+    "collisionMatrix": {
+      "0": 1
+    }
+  },
+  "general": {
+    "designResolution": {
+      "width": 393,
+      "height": 852,
+      "fitHeight": true,
+      "fitWidth": true
+    }
+  },
+  "layer": [
+    {
+      "name": "MiniMap",
+      "value": 1
+    },
+    {
+      "name": "MiniSprite",
+      "value": 2
+    }
+  ]
+}
