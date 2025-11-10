@@ -1,4 +1,7 @@
 import { _decorator, Component, Node, Prefab, instantiate, Vec3, SkeletalAnimation, tween, v3, assetManager, SpriteRenderer, SpriteFrame, Label, Color } from 'cc';
+import pako from '../utils/Pako.js';
+import { Utils } from '../utils/Utils';
+import { ZIMManager } from '../zim/ZIMManage';
 const { ccclass, property } = _decorator;
 
 @ccclass('CharacterPits')
@@ -55,6 +58,15 @@ export class CharacterPits extends Component {
 		}
 	] as any;
 
+	// ZIM管理器
+	private zimManager: ZIMManager = ZIMManager.getInstance();
+
+	// 土坑索引
+	private _holeIndex : number = 1;
+
+	// 现有土坑
+	private _existingHoles: Map<string, Node> = new Map();
+
 	/**
 	 * 开始
 	 */
@@ -62,6 +74,18 @@ export class CharacterPits extends Component {
 		this.DigCountNodes.forEach(node => {
 			node.on(Node.EventType.TOUCH_START, this.onDigCountClick, this);
 		});
+		
+		// 处理房间消息
+        this.zimManager.setRoomCallback('onRoomMessageReceived', (data: any) => {
+            if (data.messageList && data.messageList.length > 0) {
+                data.messageList.forEach((res: any) => {
+                    const message = JSON.parse(pako.inflateRaw(new Utils().base64ToUint8Array(res.message), { to: 'string' }));
+                    if (message.roomID == this.zimManager.getCurrentRoomID()) {
+						this.batchUpdatePits(message.pits, message._anim);
+                    }
+                });
+            }
+        });
 	}
 
 	/**
@@ -70,6 +94,76 @@ export class CharacterPits extends Component {
 	onDigCountClick() {
 		this.createPitIfPossible();
 	}
+
+	/**
+	 * 所有土坑数据更新
+	 */
+    batchUpdatePits(pitsData, anim) {
+		const currentHoleIds = new Set<string>();
+        // 更新或创建土坑
+        pitsData.forEach(pit => {
+            const holeId = pit.holeId.toString();
+            currentHoleIds.add(holeId);
+            
+            let holeNode = this._existingHoles.get(holeId);
+            
+            if (holeNode) {
+                // 更新现有土坑属性
+                this.updateExistingHole(holeNode, pit);
+            } else {
+                // 创建新土坑
+                holeNode = this.createNewHole(pit, anim);
+                this._existingHoles.set(holeId, holeNode);
+            }
+        });
+		this._holeIndex = Math.max(this._existingHoles.size, pitsData.length) + 1;
+    }
+
+	/**
+     * 更新现有土坑
+     */
+    updateExistingHole(holeNode: Node, pitData: any) {
+        // 仅更新属性，不更新位置（避免土坑随人物移动）
+		holeNode['holeId'] = pitData.holeId;
+        holeNode['holeNum'] = pitData.holeNum;
+        holeNode['giftData'] = pitData.giftData;
+		holeNode['holePosition'] = pitData.holePosition;
+
+        // 更新位置
+        holeNode.setPosition(pitData.holePosition);
+    }
+
+	/**
+	 * 创建新土坑
+	 */
+    createNewHole(pitData, anim) {
+        const hole = instantiate(this.HolePrefab);
+        // 设置土坑属性
+        hole['holeId'] = pitData.holeId;
+        hole['holeNum'] = pitData.holeNum;
+        hole['giftData'] = pitData.giftData;
+		hole['holePosition'] = pitData.holePosition;
+        
+        // 设置位置
+        const position = new Vec3(
+            pitData.holePosition.x,
+            pitData.holePosition.y,
+            pitData.holePosition.z
+        );
+        hole.setPosition(position);
+		if (anim == 'revive') {
+			this.scheduleOnce(() => {
+				this.node.addChild(hole);
+				this.CharacterNode.getComponent(SkeletalAnimation).play('idle');
+				this.CharacterNode['_anim'] = 'idle';
+				this.createScatterGifts(hole.position, hole['holeId']);
+			}, 1);
+		} else {
+			this.node.addChild(hole);
+		}
+        
+        return hole;
+    }
 
 	// 检测是否可以创建土坑
 	createPitIfPossible() {
@@ -97,8 +191,10 @@ export class CharacterPits extends Component {
 		} else {
 			console.log('旁边已有土坑，跳过创建播放挖宝动画');
 			this.CharacterNode.getComponent(SkeletalAnimation).play('revive');
+			this.CharacterNode['_anim'] = 'revive';
 			this.scheduleOnce(() => {
 				this.CharacterNode.getComponent(SkeletalAnimation).play('idle');
+				this.CharacterNode['_anim'] = 'idle';
 			}, 1);
 		}
 	}
@@ -106,17 +202,23 @@ export class CharacterPits extends Component {
 	// 创建土坑
 	createNewPit() {
 		this.CharacterNode.getComponent(SkeletalAnimation).play('revive');
+		this.CharacterNode['_anim'] = 'revive';
 		const hole = instantiate(this.HolePrefab);
-		hole['holeId'] = this.node.children.length + 1;
+		hole['holeId'] = this._holeIndex;
+		hole['holeNum'] = this._digCount;
+		hole['giftData'] = this.NUM_GIFTS;
+		hole['holePosition'] = this.CharacterNode.position;
+		this._existingHoles.set(hole['holeId'].toString(), hole);
 		hole.setPosition(
 			this.CharacterNode.position.x,
-			hole.position.y,
+			this.CharacterNode.position.y,
 			this.CharacterNode.position.z
 		);
-
+		this._holeIndex++;
 		this.scheduleOnce(() => {
 			this.node.addChild(hole);
 			this.CharacterNode.getComponent(SkeletalAnimation).play('idle');
+			this.CharacterNode['_anim'] = 'idle';
 			this.createScatterGifts(hole.position, hole['holeId']);
 		}, 1);
 	}

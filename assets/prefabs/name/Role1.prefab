@@ -35,8 +35,8 @@
     },
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": -11.123248119840582,
-      "y": 74.959375,
+      "x": -1000,
+      "y": -1000,
       "z": 0
     },
     "_lrot": {
@@ -76,8 +76,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 57.99393897891838,
-      "height": 52.400000000000034
+      "width": 2,
+      "height": 52.40000000000009
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -112,7 +112,7 @@
       "b": 248,
       "a": 255
     },
-    "_string": "入门菜鸟",
+    "_string": "",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
     "_actualFontSize": 14.821596244131456,
@@ -172,10 +172,10 @@
     },
     "_alignFlags": 45,
     "_target": null,
-    "_left": 156.37978239070023,
-    "_right": 178.6262786303814,
-    "_top": 324.840625,
-    "_bottom": 474.759375,
+    "_left": -804.5,
+    "_right": 1195.5,
+    "_top": 1399.8,
+    "_bottom": -600.2,
     "_horizontalCenter": 0,
     "_verticalCenter": 0,
     "_isAbsLeft": true,

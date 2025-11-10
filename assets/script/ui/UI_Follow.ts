@@ -1,8 +1,14 @@
 import { _decorator, Camera, Component, Node, UITransform, Vec3, view, macro, Prefab, instantiate, Label } from 'cc'
+import { ZIMManager } from '../zim/ZIMManage';
+import { Utils } from '../utils/Utils';
+import pako from '../utils/Pako.js';
 const { ccclass, property } = _decorator
 
 @ccclass('UI_Follow')
 export class UI_Follow extends Component {
+
+	// ZIM管理器
+	private zimManager: ZIMManager = ZIMManager.getInstance();
 
 	// 玩家节点
 	@property({ type: Node })
@@ -37,21 +43,21 @@ export class UI_Follow extends Component {
 	// 用户昵称
 	userName : Node = null
 
-	//其他角色昵称
-	otherUserName : Node[] = []
+	// 其他角色昵称映射
+	private _otherUserNameMap : Map<string, Node> = new Map()
 
 	/**
 	 * 开始
 	 */
 	start() {
 		this.userName = instantiate(this.userNamepre);
-		this.node.addChild(this.userName);
-		this.roomCharacters.children.forEach((child) => {
-			const otherName = instantiate(this.otherUserNamepre);
-			otherName.getComponent(Label).string = child['roleName'];
-			this.otherUserName.push(otherName);
-			this.node.addChild(otherName);
+		this.zimManager.setRoomCallback('onRoomStateChanged', (data: any) => {
+			this.userName.getComponent(Label).string = this.zimManager.getUserInfo().userName;
 		});
+
+		this.node.addChild(this.userName);
+
+	    this.setupRoomCallbacks();
 		if (this.canvasNode) {
 			this._canvasUITrans = this.canvasNode.getComponent(UITransform)
 		}
@@ -66,16 +72,64 @@ export class UI_Follow extends Component {
 			!this.userNamepre ||
 			!this.mainCamera ||
 			!this.canvasNode ||
-			!this._canvasUITrans
+			!this._canvasUITrans ||
+			!this._otherUserNameMap
 		)
 			return
 
 		// 设置UI节点位置
-		this.userName.setPosition(this.calculateRoleHeadWorldPos(this.playerNode))
-		this.roomCharacters.children.forEach((child, index) => {
-			this.otherUserName[index].setPosition(this.calculateRoleHeadWorldPos(child))
+		this.userName.setPosition(this.calculateRoleHeadWorldPos(this.playerNode));
+		this._otherUserNameMap.forEach((nameNode, userID) => {
+			const characterNode = this.roomCharacters.children.find((child: Node) => child['userID'] === userID);
+			if (characterNode) {
+				nameNode.setPosition(this.calculateRoleHeadWorldPos(characterNode));
+			}
 		});
 	}
+
+	/**
+	 * 房间成员加入和消息接收回调
+	 */
+	setupRoomCallbacks() {
+		this.zimManager.setRoomCallback('onRoomMemberJoined', (data: any) => {
+			data.memberList.forEach((member: any) => {
+				this.createOtherUserName(member.userID, member.userName);
+			});
+		});
+
+		this.zimManager.setRoomCallback('onRoomMemberLeft', (data: any) => {
+            if (data.roomID == this.zimManager.getCurrentRoomID()) {
+                data.memberList.forEach((member: any) => {
+                    this.removeOtherUserName(member.userID);
+                });
+            }
+        });
+
+        this.zimManager.setRoomCallback('onRoomMessageReceived', (data: any) => {
+            if (data.messageList && data.messageList.length > 0) {
+                data.messageList.forEach((res: any) => {
+                    const message = JSON.parse(pako.inflateRaw(new Utils().base64ToUint8Array(res.message), { to: 'string' }))
+                    if (message.roomID == this.zimManager.getCurrentRoomID()) {
+						if (!this._otherUserNameMap.has(message.userID)) {
+							this.createOtherUserName(message.userID, message.userName);
+						}
+                    }
+                });
+            }
+        });
+	}
+
+	/**
+	 * 创建指定用户昵称
+	 */
+	createOtherUserName(userID, userName) {
+        const otherName = instantiate(this.otherUserNamepre);
+        otherName.getComponent(Label).string = userName;
+        this._otherUserNameMap.set(userID, otherName);
+		this.scheduleOnce(() => {
+			this.node.addChild(otherName);
+		}, 0.5)
+    }
 
 	/**
 	 * 设置角色头顶世界坐标 
@@ -131,5 +185,26 @@ export class UI_Follow extends Component {
 			width: view.getCanvasSize().width,
 			height: view.getCanvasSize().height
 		}
+	}
+
+	/**
+	 * 删除其他角色昵称
+	 */
+	removeOtherUserName(userID) {
+		// 删除昵称
+		const otherName = this._otherUserNameMap.get(userID);
+		if (otherName) {
+			otherName.destroy();
+		}
+	}
+
+	/**
+	 * 销毁
+	 */
+	onDestroy() {
+		this._otherUserNameMap.forEach((nameNode, userID) => {
+			nameNode.destroy();
+		});
+		this._otherUserNameMap.clear();
 	}
 }

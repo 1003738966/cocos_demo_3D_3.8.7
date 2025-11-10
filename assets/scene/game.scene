@@ -224,7 +224,7 @@
     "_fovAxis": 0,
     "_orthoHeight": 10,
     "_near": 1,
-    "_far": 1000,
+    "_far": 100,
     "_color": {
       "__type__": "cc.Color",
       "r": 51,
@@ -273,9 +273,9 @@
       "y": 0.5,
       "z": 0
     },
-    "lenMin": 15,
+    "lenMin": 10,
     "lenMax": 20,
-    "len": 15,
+    "len": 16,
     "rotateVHSeparately": false,
     "tweenTime": 0.2,
     "_id": "59/QFDGedCYpA1j+9OhsqO"
@@ -311,16 +311,16 @@
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": -1.0080000162124634,
+      "x": -1.008,
       "y": 29.8,
-      "z": 2.493000030517578
+      "z": 2.493
     },
     "_lrot": {
       "__type__": "cc.Quat",
-      "x": 1.0686517421193947e-18,
-      "y": -1,
-      "z": -6.543604676948798e-35,
-      "w": 6.123233995736766e-17
+      "x": 0,
+      "y": 0,
+      "z": -1.0686517421193947e-18,
+      "w": 1
     },
     "_lscale": {
       "__type__": "cc.Vec3",
@@ -333,7 +333,7 @@
     "_euler": {
       "__type__": "cc.Vec3",
       "x": 0,
-      "y": -180,
+      "y": 0,
       "z": -1.224584691854883e-16
     },
     "_id": "97ft/C/nRHfbo/TbXGS0IG"
@@ -1110,9 +1110,9 @@
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": -1.008,
-      "y": 29.8,
-      "z": 2.493
+      "x": 0,
+      "y": 0,
+      "z": 0
     },
     "_lrot": {
       "__type__": "cc.Quat",
@@ -16330,9 +16330,7 @@
     "mainCamera": {
       "__id__": 6
     },
-    "velocity": 3,
-    "jumpVelocity": 4,
-    "maxJumpTimes": 2.2,
+    "velocity": 5,
     "idleAnimClip": {
       "__uuid__": "36dc4ba3-93f3-43b1-898b-46e9b392a617@1f586",
       "__expectedType__": "cc.AnimationClip"

@@ -1,4 +1,7 @@
 import { UITransform, v3, EventTouch, _decorator, Component, Node, Prefab, instantiate, Widget, view, sys } from 'cc';
+import pako from '../utils/Pako.js';
+import { Utils } from '../utils/Utils';
+import { ZIMManager } from '../zim/ZIMManage';
 const { ccclass, property } = _decorator;
 
 /** 
@@ -51,8 +54,10 @@ export class MiniMap extends Component {
 	// 小地图角色精灵
 	smallRole : Node = null
 
-	// 其他精灵
-	otherSprite : Node[] = []
+	// ZIM管理器
+	private zimManager: ZIMManager = ZIMManager.getInstance();
+	// 角色映射表
+	private _characterNodes: Map<string, Node> = new Map();
 
 	/**
 	 * onLoad
@@ -73,11 +78,7 @@ export class MiniMap extends Component {
 	start() {
 		this.smallRole = instantiate(this.node_smallRole);
 		this.node.addChild(this.smallRole);
-		this.roomCharacters.children.forEach((child) => {
-			const otherSprite = instantiate(this.miniMapSprite);
-			this.otherSprite.push(otherSprite);
-			this.node.addChild(otherSprite);
-		});
+		this.setupRoomCallbacks();
 	}
 
 	/**
@@ -87,9 +88,53 @@ export class MiniMap extends Component {
 		/** 小地图角色位置 */
 		this.smallRole.setPosition(this.calculateSmallRolePosition(this.node_role).smallRoleX, -this.calculateSmallRolePosition(this.node_role).smallRoleY, 0);
 		/** 其他精灵位置 */
-		this.roomCharacters.children.forEach((child, index) => {
-			this.otherSprite[index].setPosition(this.calculateSmallRolePosition(child).smallRoleX, -this.calculateSmallRolePosition(child).smallRoleY, 0);
+		this._characterNodes.forEach((nameNode, userID) => {
+			const characterNode = this.roomCharacters.children.find((child: Node) => child['userID'] === userID);
+			if (characterNode) {
+				nameNode.setPosition(this.calculateSmallRolePosition(characterNode).smallRoleX, -this.calculateSmallRolePosition(characterNode).smallRoleY, 0)
+			}
 		});
+	}
+
+	/**
+	 * 房间成员加入和消息接收回调
+	 */
+	setupRoomCallbacks() {
+		this.zimManager.setRoomCallback('onRoomMemberJoined', (data: any) => {
+			data.memberList.forEach((member: any) => {
+				this.createOtherSprite(member.userID);
+			});
+		});
+
+		this.zimManager.setRoomCallback('onRoomMemberLeft', (data: any) => {
+            if (data.roomID == this.zimManager.getCurrentRoomID()) {
+                data.memberList.forEach((member: any) => {
+                    this.removeOtherSprite(member.userID);
+                });
+            }
+        });
+
+        this.zimManager.setRoomCallback('onRoomMessageReceived', (data: any) => {
+            if (data.messageList && data.messageList.length > 0) {
+                data.messageList.forEach((res: any) => {
+                    const message = JSON.parse(pako.inflateRaw(new Utils().base64ToUint8Array(res.message), { to: 'string' }))
+                    if (message.roomID == this.zimManager.getCurrentRoomID()) {
+                        if (!this._characterNodes.has(message.userID)) {
+							this.createOtherSprite(message.userID);
+                        }
+                    }
+                });
+            }
+        });
+	}
+
+	/**
+	 * 创建其他精灵
+	 */
+	createOtherSprite(userID: string) {
+		const otherSprite = instantiate(this.miniMapSprite);
+		this._characterNodes.set(userID, otherSprite);
+		this.node.addChild(otherSprite);
 	}
 
 	/**
@@ -108,5 +153,25 @@ export class MiniMap extends Component {
 			smallRoleX: smallRoleX,
 			smallRoleY: smallRoleY
 		}
+	}
+
+	/**
+	 * 删除指定用户精灵
+	 */
+	removeOtherSprite(userID) {
+		const otherSprite = this._characterNodes.get(userID);
+		if (otherSprite) {
+			otherSprite.destroy();
+		}
+	}
+
+	/**
+	 * 销毁
+	 */
+	onDestroy() {
+		this._characterNodes.forEach((nameNode, userID) => {
+			nameNode.destroy();
+		});
+		this._characterNodes.clear();
 	}
 }

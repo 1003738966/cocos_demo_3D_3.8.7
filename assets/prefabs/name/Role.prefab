@@ -76,7 +76,7 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 113.98787795783674,
+      "width": 2,
       "height": 52.4
     },
     "_anchorPoint": {
@@ -112,7 +112,7 @@
       "b": 255,
       "a": 255
     },
-    "_string": "爱玩游戏的年轻人",
+    "_string": "",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
     "_actualFontSize": 14.821596244131456,
@@ -172,8 +172,8 @@
     },
     "_alignFlags": 45,
     "_target": null,
-    "_left": 128.38281290124104,
-    "_right": 150.6293091409222,
+    "_left": 184.37675188015942,
+    "_right": 206.62324811984058,
     "_top": 324.840625,
     "_bottom": 474.759375,
     "_horizontalCenter": 0,
